@@ -21,11 +21,13 @@ declare global {
 }
 
 export interface HassDialog<T = unknown> extends HTMLElement {
+  dialogAnchor?: Element;
   showDialog(params: T);
   closeDialog?: (historyState?: any) => Promise<boolean> | boolean;
 }
 
 export interface HassDialogNext<T = unknown> extends HTMLElement {
+  dialogAnchor?: Element;
   params?: T;
   closeDialog?: (historyState?: any) => Promise<boolean> | boolean;
 }
@@ -34,6 +36,7 @@ export interface ShowDialogParams<T> {
   dialogTag: keyof HTMLElementTagNameMap;
   dialogImport: () => Promise<unknown>;
   dialogParams?: T;
+  dialogAnchor?: Element;
   addHistory?: boolean;
   parentElement?: LitElement;
 }
@@ -71,6 +74,7 @@ export const FOCUS_TARGET = Symbol.for("HA focus target");
  * @param dialogImport Optional lazy import used when the dialog has not been loaded yet.
  * @param parentElement Optional parent to append the dialog to instead of root element.
  * @param addHistory Whether to add/update browser history so back navigation closes dialogs.
+ * @param dialogAnchor Optional anchor element used by anchored dialog variants.
  * @returns `true` if the dialog was shown (or could be shown), `false` if it could not be loaded.
  */
 export const showDialog = async (
@@ -79,7 +83,8 @@ export const showDialog = async (
   dialogParams: unknown,
   dialogImport?: () => Promise<unknown>,
   parentElement?: LitElement,
-  addHistory = true
+  addHistory = true,
+  dialogAnchor?: Element
 ): Promise<boolean> => {
   if (!(dialogTag in LOADED)) {
     if (!dialogImport) {
@@ -124,7 +129,8 @@ export const showDialog = async (
         dialogParams,
         dialogImport,
         parentElement,
-        addHistory
+        addHistory,
+        dialogAnchor
       );
     }
     const dialogIndex = OPEN_DIALOG_STACK.findIndex(
@@ -169,8 +175,10 @@ export const showDialog = async (
   }
 
   if ("showDialog" in dialogElement!) {
+    dialogElement.dialogAnchor = dialogAnchor;
     dialogElement.showDialog(dialogParams);
   } else {
+    dialogElement!.dialogAnchor = dialogAnchor;
     dialogElement!.params = dialogParams;
   }
 
@@ -267,6 +275,7 @@ export const makeDialogManager = (element: LitElement & ProvideHassElement) => {
         dialogTag,
         dialogImport,
         dialogParams,
+        dialogAnchor,
         addHistory,
         parentElement,
       } = e.detail;
@@ -277,7 +286,8 @@ export const makeDialogManager = (element: LitElement & ProvideHassElement) => {
         dialogParams,
         dialogImport,
         parentElement,
-        addHistory
+        addHistory,
+        dialogAnchor
       );
     }
   );

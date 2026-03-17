@@ -1,6 +1,5 @@
 import type { LitElement } from "lit";
 import { fireEvent } from "../common/dom/fire_event";
-import type { HaDialog } from "../components/ha-dialog";
 import type { Constructor } from "../types";
 import type { HassDialogNext } from "./make-dialog-manager";
 
@@ -13,6 +12,8 @@ export const DialogMixin = <
   class extends superClass implements HassDialogNext<P> {
     declare public params?: P;
 
+    public dialogAnchor?: Element;
+
     private _closePromise?: Promise<boolean>;
 
     private _closeResolve?: (value: boolean) => void;
@@ -23,8 +24,9 @@ export const DialogMixin = <
       }
 
       const dialogElement = this.shadowRoot?.querySelector(
-        "ha-dialog"
-      ) as HaDialog | null;
+        "ha-adaptive-dialog, ha-dialog, ha-bottom-sheet"
+      ) as { open: boolean } | null;
+
       if (dialogElement) {
         this._closePromise = new Promise<boolean>((resolve) => {
           this._closeResolve = resolve;
