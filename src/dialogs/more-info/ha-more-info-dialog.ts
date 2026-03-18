@@ -92,6 +92,7 @@ export interface MoreInfoDialogParams {
   large?: boolean;
   data?: Record<string, any>;
   parentElement?: LitElement;
+  anchor?: Element;
 }
 
 type View = "info" | "history" | "settings" | "related" | "add_to";
@@ -117,6 +118,8 @@ const DEFAULT_VIEW: View = "info";
 @customElement("ha-more-info-dialog")
 export class MoreInfoDialog extends ScrollableFadeMixin(LitElement) {
   @property({ attribute: false }) public hass!: HomeAssistant;
+
+  @property({ attribute: false }) public dialogAnchor?: Element;
 
   @property({ type: Boolean, reflect: true }) public large = false;
 
@@ -169,6 +172,9 @@ export class MoreInfoDialog extends ScrollableFadeMixin(LitElement) {
     this._childView = undefined;
     this.large = params.large ?? false;
     this._fill = false;
+    if (params.anchor) {
+      this.dialogAnchor = params.anchor;
+    }
     this._open = true;
     this._loadEntityRegistryEntry();
   }
@@ -205,6 +211,7 @@ export class MoreInfoDialog extends ScrollableFadeMixin(LitElement) {
     this._currView = DEFAULT_VIEW;
     this._childView = undefined;
     this._isEscapeEnabled = true;
+    this.dialogAnchor = undefined;
     window.removeEventListener("dialog-closed", this._enableEscapeKeyClose);
     window.removeEventListener("show-dialog", this._disableEscapeKeyClose);
     fireEvent(this, "dialog-closed", { dialog: this.localName });
@@ -581,6 +588,10 @@ export class MoreInfoDialog extends ScrollableFadeMixin(LitElement) {
         .hass=${this.hass}
         .open=${this._open}
         .width=${this._fill ? "full" : this.large ? "large" : "medium"}
+        desktop-mode=${this.dialogAnchor && !this.large && !this._fill
+          ? "popover"
+          : "dialog"}
+        .dialogAnchor=${this.dialogAnchor ?? null}
         @closed=${this._dialogClosed}
         @opened=${this._handleOpened}
         .preventScrimClose=${this._currView === "settings" ||
