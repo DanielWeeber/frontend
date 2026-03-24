@@ -16,6 +16,7 @@ import type { GasSourceTypeEnergyPreference } from "../../../../data/energy";
 import {
   emptyGasEnergyPreference,
   energyStatisticHelpUrl,
+  getStatisticLabel,
 } from "../../../../data/energy";
 import {
   getDisplayUnit,
@@ -197,6 +198,23 @@ export class DialogEnergyGasSettings
           )}
         ></ha-statistic-picker>
 
+        <ha-textfield
+          .label=${this.hass.localize(
+            "ui.panel.config.energy.device_consumption.dialog.display_name"
+          )}
+          type="text"
+          .disabled=${!this._source.stat_energy_from}
+          .value=${this._source.name || ""}
+          .placeholder=${this._source.stat_energy_from
+            ? getStatisticLabel(
+                this.hass,
+                this._source.stat_energy_from,
+                this._params?.statsMetadata?.[this._source.stat_energy_from]
+              )
+            : ""}
+          @input=${this._nameChanged}
+        ></ha-textfield>
+
         <p>
           ${this.hass.localize("ui.panel.config.energy.gas.dialog.cost_para")}
         </p>
@@ -373,6 +391,17 @@ export class DialogEnergyGasSettings
     };
   }
 
+  private _nameChanged(ev) {
+    const newSource = {
+      ...this._source!,
+      name: ev.target!.value,
+    } as GasSourceTypeEnergyPreference;
+    if (!newSource.name) {
+      delete newSource.name;
+    }
+    this._source = newSource;
+  }
+
   private async _statisticChanged(ev: ValueChangedEvent<string>) {
     if (ev.detail.value) {
       const metadata = await getStatisticMetadata(this.hass, [ev.detail.value]);
@@ -415,6 +444,11 @@ export class DialogEnergyGasSettings
         ha-statistic-picker {
           display: block;
           margin-bottom: var(--ha-space-4);
+        }
+        ha-textfield.name-field {
+          display: block;
+          margin-bottom: var(--ha-space-4);
+          width: 100%;
         }
         ha-formfield {
           display: block;
