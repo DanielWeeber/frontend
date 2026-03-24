@@ -16,6 +16,7 @@ import type { WaterSourceTypeEnergyPreference } from "../../../../data/energy";
 import {
   emptyWaterEnergyPreference,
   energyStatisticHelpUrl,
+  getStatisticLabel,
 } from "../../../../data/energy";
 import { isExternalStatistic } from "../../../../data/recorder";
 import { getSensorDeviceClassConvertibleUnits } from "../../../../data/sensor";
@@ -154,6 +155,23 @@ export class DialogEnergyWaterSettings
             { unit: this._flow_rate_units?.join(", ") || "" }
           )}
         ></ha-statistic-picker>
+
+        <ha-textfield
+          .label=${this.hass.localize(
+            "ui.panel.config.energy.device_consumption.dialog.display_name"
+          )}
+          type="text"
+          .disabled=${!this._source.stat_energy_from}
+          .value=${this._source.name || ""}
+          .placeholder=${this._source.stat_energy_from
+            ? getStatisticLabel(
+                this.hass,
+                this._source.stat_energy_from,
+                this._params?.statsMetadata?.[this._source.stat_energy_from]
+              )
+            : ""}
+          @input=${this._nameChanged}
+        ></ha-textfield>
 
         <p>
           ${this.hass.localize("ui.panel.config.energy.water.dialog.cost_para")}
@@ -313,6 +331,17 @@ export class DialogEnergyWaterSettings
     };
   }
 
+  private _nameChanged(ev) {
+    const newSource = {
+      ...this._source!,
+      name: ev.target!.value,
+    } as WaterSourceTypeEnergyPreference;
+    if (!newSource.name) {
+      delete newSource.name;
+    }
+    this._source = newSource;
+  }
+
   private async _statisticChanged(ev: ValueChangedEvent<string>) {
     if (
       ev.detail.value &&
@@ -349,6 +378,11 @@ export class DialogEnergyWaterSettings
         ha-statistic-picker {
           display: block;
           margin-bottom: var(--ha-space-4);
+        }
+        ha-textfield.name-field {
+          display: block;
+          margin-bottom: var(--ha-space-4);
+          width: 100%;
         }
         ha-formfield {
           display: block;
