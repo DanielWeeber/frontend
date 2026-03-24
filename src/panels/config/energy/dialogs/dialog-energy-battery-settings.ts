@@ -6,6 +6,7 @@ import "../../../../components/entity/ha-statistic-picker";
 import "../../../../components/ha-button";
 import "../../../../components/ha-dialog";
 import "../../../../components/ha-dialog-footer";
+import "../../../../components/ha-textfield";
 import type {
   BatterySourceTypeEnergyPreference,
   PowerConfig,
@@ -13,6 +14,7 @@ import type {
 import {
   emptyBatteryEnergyPreference,
   energyStatisticHelpUrl,
+  getStatisticLabel,
 } from "../../../../data/energy";
 import { getSensorDeviceClassConvertibleUnits } from "../../../../data/sensor";
 import type { HassDialog } from "../../../../dialogs/make-dialog-manager";
@@ -171,6 +173,23 @@ export class DialogEnergyBatterySettings
           )}
         ></ha-statistic-picker>
 
+        <ha-textfield
+          .label=${this.hass.localize(
+            "ui.panel.config.energy.device_consumption.dialog.display_name"
+          )}
+          type="text"
+          .disabled=${!this._source.stat_energy_from || !this._source.stat_energy_to}
+          .value=${this._source.name || ""}
+          .placeholder=${this._source.stat_energy_from
+            ? getStatisticLabel(
+                this.hass,
+                this._source.stat_energy_from,
+                this._params?.statsMetadata?.[this._source.stat_energy_from]
+              )
+            : ""}
+          @input=${this._nameChanged}
+        ></ha-textfield>
+
         <ha-energy-power-config
           .hass=${this.hass}
           .powerType=${this._powerType}
@@ -225,6 +244,17 @@ export class DialogEnergyBatterySettings
     this._source = { ...this._source!, stat_energy_from: ev.detail.value };
   }
 
+  private _nameChanged(ev) {
+    const newSource = {
+      ...this._source!,
+      name: ev.target!.value,
+    } as BatterySourceTypeEnergyPreference;
+    if (!newSource.name) {
+      delete newSource.name;
+    }
+    this._source = newSource;
+  }
+
   private _handlePowerConfigChanged(
     ev: CustomEvent<{ powerType: PowerType; powerConfig: PowerConfig }>
   ) {
@@ -245,6 +275,11 @@ export class DialogEnergyBatterySettings
         source.power_config = { ...this._powerConfig };
       }
 
+      // Preserve name if set
+      if (this._source!.name) {
+        source.name = this._source!.name;
+      }
+
       await this._params!.saveCallback(source);
       this.closeDialog();
     } catch (err: any) {
@@ -263,6 +298,11 @@ export class DialogEnergyBatterySettings
         }
         ha-statistic-picker:last-of-type {
           margin-bottom: 0;
+        }
+        ha-textfield {
+          display: block;
+          margin-top: var(--ha-space-4);
+          width: 100%;
         }
       `,
     ];
