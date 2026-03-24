@@ -18,6 +18,7 @@ import type {
 import {
   emptyGridSourceEnergyPreference,
   energyStatisticHelpUrl,
+  getStatisticLabel,
 } from "../../../../data/energy";
 import { isExternalStatistic } from "../../../../data/recorder";
 import { getSensorDeviceClassConvertibleUnits } from "../../../../data/sensor";
@@ -172,6 +173,9 @@ export class DialogEnergyGridSettings
       this._source.stat_energy_to &&
       isExternalStatistic(this._source.stat_energy_to);
 
+    const primaryStatId =
+      this._source.stat_energy_from ?? this._source.stat_energy_to ?? "";
+
     return html`
       <ha-dialog
         .hass=${this.hass}
@@ -222,6 +226,23 @@ export class DialogEnergyGridSettings
             { unit: this._energy_units?.join(", ") || "" }
           )}
         ></ha-statistic-picker>
+
+        <ha-textfield
+          .label=${this.hass.localize(
+            "ui.panel.config.energy.device_consumption.dialog.display_name"
+          )}
+          type="text"
+          .disabled=${!primaryStatId}
+          .value=${this._source.name || ""}
+          .placeholder=${primaryStatId
+            ? getStatisticLabel(
+                this.hass,
+                primaryStatId,
+                this._params?.statsMetadata?.[primaryStatId]
+              )
+            : ""}
+          @input=${this._nameChanged}
+        ></ha-textfield>
 
         <p class="section-label">
           ${this.hass.localize(
@@ -460,7 +481,6 @@ export class DialogEnergyGridSettings
   }
 
   private _isValid(): boolean {
-    // Grid must have at least one of: import, export, or power
     const hasImport = !!this._source?.stat_energy_from;
     const hasExport = !!this._source?.stat_energy_to;
     const hasPower = this._powerType !== "none";
@@ -469,7 +489,6 @@ export class DialogEnergyGridSettings
       return false;
     }
 
-    // Check power config validity (if power is configured)
     if (hasPower) {
       const powerConfigEl = this.shadowRoot?.querySelector(
         "ha-energy-power-config"
@@ -484,7 +503,6 @@ export class DialogEnergyGridSettings
 
   private _statisticFromChanged(ev: ValueChangedEvent<string>) {
     this._source = { ...this._source!, stat_energy_from: ev.detail.value };
-    // Reset cost type if switching to external statistic with incompatible cost type
     if (
       ev.detail.value &&
       isExternalStatistic(ev.detail.value) &&
@@ -504,7 +522,6 @@ export class DialogEnergyGridSettings
       ...this._source!,
       stat_energy_to: ev.detail.value || null,
     };
-    // Clear export cost if export is removed
     if (!ev.detail.value) {
       this._exportCostType = "no_cost";
       this._source = {
@@ -514,7 +531,6 @@ export class DialogEnergyGridSettings
         number_energy_price_export: null,
       };
     } else if (
-      // Reset cost type if switching to external statistic with incompatible cost type
       isExternalStatistic(ev.detail.value) &&
       (this._exportCostType === "entity" || this._exportCostType === "number")
     ) {
@@ -527,10 +543,20 @@ export class DialogEnergyGridSettings
     }
   }
 
+  private _nameChanged(ev) {
+    const newSource = {
+      ...this._source!,
+      name: ev.target!.value,
+    } as GridSourceTypeEnergyPreference;
+    if (!newSource.name) {
+      delete newSource.name;
+    }
+    this._source = newSource;
+  }
+
   private _handleImportCostTypeChanged(ev: Event) {
     const input = ev.currentTarget as HaRadio;
     this._importCostType = input.value as CostType;
-    // Clear other cost fields when switching types
     this._source = {
       ...this._source!,
       stat_cost: null,
@@ -542,7 +568,6 @@ export class DialogEnergyGridSettings
   private _handleExportCostTypeChanged(ev: Event) {
     const input = ev.currentTarget as HaRadio;
     this._exportCostType = input.value as CostType;
-    // Clear other cost fields when switching types
     this._source = {
       ...this._source!,
       stat_compensation: null,
@@ -610,9 +635,12 @@ export class DialogEnergyGridSettings
         cost_adjustment_day: this._source!.cost_adjustment_day,
       };
 
-      // Only include power_config if a power type is selected
       if (this._powerType !== "none") {
         source.power_config = { ...this._powerConfig };
+      }
+
+      if (this._source!.name) {
+        source.name = this._source!.name;
       }
 
       await this._params!.saveCallback(source);
