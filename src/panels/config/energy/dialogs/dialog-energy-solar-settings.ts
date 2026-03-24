@@ -11,6 +11,7 @@ import "../../../../components/ha-button";
 import "../../../../components/ha-dialog-footer";
 import "../../../../components/ha-radio";
 import "../../../../components/ha-svg-icon";
+import "../../../../components/ha-textfield";
 import "../../../../components/ha-dialog";
 import type { HaRadio } from "../../../../components/ha-radio";
 import type { ConfigEntry } from "../../../../data/config_entries";
@@ -19,6 +20,7 @@ import type { SolarSourceTypeEnergyPreference } from "../../../../data/energy";
 import {
   emptySolarEnergyPreference,
   energyStatisticHelpUrl,
+  getStatisticLabel,
 } from "../../../../data/energy";
 import { getSensorDeviceClassConvertibleUnits } from "../../../../data/sensor";
 import { showConfigFlowDialog } from "../../../../dialogs/config-flow/show-dialog-config-flow";
@@ -144,6 +146,23 @@ export class DialogEnergySolarSettings
             { unit: this._power_units?.join(", ") || "" }
           )}
         ></ha-statistic-picker>
+
+        <ha-textfield
+          .label=${this.hass.localize(
+            "ui.panel.config.energy.device_consumption.dialog.display_name"
+          )}
+          type="text"
+          .disabled=${!this._source.stat_energy_from}
+          .value=${this._source.name || ""}
+          .placeholder=${this._source.stat_energy_from
+            ? getStatisticLabel(
+                this.hass,
+                this._source.stat_energy_from,
+                this._params?.statsMetadata?.[this._source.stat_energy_from]
+              )
+            : ""}
+          @input=${this._nameChanged}
+        ></ha-textfield>
 
         <h3>
           ${this.hass.localize(
@@ -307,6 +326,17 @@ export class DialogEnergySolarSettings
     this._source = { ...this._source!, stat_rate: ev.detail.value };
   }
 
+  private _nameChanged(ev) {
+    const newSource = {
+      ...this._source!,
+      name: ev.target!.value,
+    } as SolarSourceTypeEnergyPreference;
+    if (!newSource.name) {
+      delete newSource.name;
+    }
+    this._source = newSource;
+  }
+
   private async _save() {
     try {
       if (!this._forecast) {
@@ -327,6 +357,11 @@ export class DialogEnergySolarSettings
         ha-statistic-picker {
           display: block;
           margin-bottom: var(--ha-space-4);
+        }
+        ha-textfield {
+          display: block;
+          margin-top: var(--ha-space-4);
+          width: 100%;
         }
         img {
           height: 24px;
